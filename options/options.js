@@ -15,7 +15,7 @@ chrome.storage.sync.get(
   {
     aiProvider: "openai",
     modelName: "",
-    captureFrequency: 5,
+    captureFrequency: 2,
     customPrompt: "",
   },
   (items) => {

@@ -30,9 +30,9 @@
       <fieldset>
         <legend>Capture Settings</legend>
 
-        <label for="capture-freq">Capture Frequency (seconds)</label>
-        <input id="capture-freq" type="number" min="2" max="120" value="5" />
-        <p class="hint">How often the extension captures and analyzes the screen. Lower = more API calls.</p>
+        <label for="capture-freq">Frame Sampling Interval (seconds)</label>
+        <input id="capture-freq" type="number" min="1" max="60" value="2" />
+        <p class="hint">How often a frame is sampled from the live video and sent to the AI. Lower = faster feedback but more API calls.</p>
       </fieldset>
 
       <!-- Custom Prompt -->

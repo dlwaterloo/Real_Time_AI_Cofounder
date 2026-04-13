@@ -7,15 +7,37 @@
 <body>
   <div class="container">
     <header>
-      <h1>🤖 AI Cofounder</h1>
+      <div class="header-top">
+        <h1>🤖 AI Cofounder</h1>
+        <button id="btn-stop" class="btn-stop hidden" title="Stop monitoring">⏹</button>
+      </div>
       <div id="status" class="status stopped">
         <span class="status-dot"></span>
         <span id="status-text">Waiting for capture…</span>
       </div>
     </header>
 
+    <!-- Live video preview -->
+    <div id="video-container" class="video-container hidden">
+      <video id="preview" autoplay muted playsinline></video>
+      <div class="video-overlay">
+        <span class="live-badge">● LIVE</span>
+      </div>
+    </div>
+
+    <!-- Current streaming feedback -->
+    <div id="streaming-card" class="streaming-card hidden">
+      <div class="streaming-header">
+        <span class="streaming-title">AI Feedback</span>
+        <span id="streaming-time" class="streaming-time"></span>
+      </div>
+      <div id="streaming-body" class="streaming-body">
+        <span class="cursor-blink"></span>
+      </div>
+    </div>
+
     <div id="empty-state" class="empty-state">
-      <p>Click <strong>Start Monitoring</strong> in the popup to begin real-time screen analysis.</p>
+      <p>Click <strong>Start Monitoring</strong> in the popup to begin real-time video analysis.</p>
     </div>
 
     <div id="feed" class="feed"></div>

@@ -1,13 +1,13 @@
 {
   "manifest_version": 3,
   "name": "Real-Time AI Cofounder",
-  "version": "1.0.0",
-  "description": "A Chrome extension that reads your screen in real time and provides AI-powered feedback and suggestions.",
+  "version": "2.0.0",
+  "description": "A Chrome extension that captures your screen as real-time video and provides streaming AI-powered feedback.",
   "permissions": [
     "activeTab",
-    "alarms",
     "sidePanel",
     "storage",
+    "tabCapture",
     "tabs"
   ],
   "action": {

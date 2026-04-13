@@ -18,11 +18,19 @@ body {
   height: 100vh;
 }
 
+.hidden { display: none !important; }
+
 /* ── Header ────────────────────────────────────────────────────────────────── */
 header {
   padding: 16px;
   border-bottom: 1px solid #1e1e30;
   flex-shrink: 0;
+}
+
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 h1 {
@@ -31,6 +39,18 @@ h1 {
   color: #fff;
   margin-bottom: 8px;
 }
+
+.btn-stop {
+  background: #e03e3e;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-stop:hover { background: #c53030; }
 
 .status {
   display: flex;
@@ -57,6 +77,90 @@ h1 {
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.3; }
+}
+
+/* ── Live video preview ───────────────────────────────────────────────────── */
+.video-container {
+  position: relative;
+  flex-shrink: 0;
+  background: #000;
+  border-bottom: 1px solid #1e1e30;
+}
+
+.video-container video {
+  width: 100%;
+  display: block;
+}
+
+.video-overlay {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+.live-badge {
+  background: rgba(224, 36, 36, 0.9);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  animation: pulse 1.5s infinite;
+}
+
+/* ── Streaming card ───────────────────────────────────────────────────────── */
+.streaming-card {
+  margin: 12px;
+  background: #1a1a2e;
+  border: 1px solid #4f6ef7;
+  border-radius: 10px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.streaming-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 14px;
+  background: #15152a;
+  border-bottom: 1px solid #4f6ef7;
+}
+
+.streaming-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #4f6ef7;
+}
+
+.streaming-time {
+  font-size: 11px;
+  color: #666;
+}
+
+.streaming-body {
+  padding: 14px;
+  max-height: 200px;
+  overflow-y: auto;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.cursor-blink {
+  display: inline-block;
+  width: 2px;
+  height: 14px;
+  background: #4f6ef7;
+  vertical-align: text-bottom;
+  animation: blink 0.8s step-end infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
 }
 
 /* ── Empty state ───────────────────────────────────────────────────────────── */
@@ -133,14 +237,9 @@ h1 {
 
 .card-screenshot {
   width: 100%;
-  max-height: 180px;
+  max-height: 120px;
   object-fit: cover;
-  cursor: pointer;
   border-bottom: 1px solid #2a2a3d;
-}
-
-.card-screenshot:hover {
-  opacity: 0.85;
 }
 
 /* ── Error card ────────────────────────────────────────────────────────────── */
@@ -170,13 +269,16 @@ h1 {
 }
 
 /* ── Scrollbar ─────────────────────────────────────────────────────────────── */
-.feed::-webkit-scrollbar {
+.feed::-webkit-scrollbar,
+.streaming-body::-webkit-scrollbar {
   width: 5px;
 }
-.feed::-webkit-scrollbar-track {
+.feed::-webkit-scrollbar-track,
+.streaming-body::-webkit-scrollbar-track {
   background: transparent;
 }
-.feed::-webkit-scrollbar-thumb {
+.feed::-webkit-scrollbar-thumb,
+.streaming-body::-webkit-scrollbar-thumb {
   background: #333;
   border-radius: 4px;
 }

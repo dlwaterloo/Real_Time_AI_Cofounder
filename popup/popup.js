@@ -1,6 +1,5 @@
 const btnStart = document.getElementById("btn-start");
 const btnStop = document.getElementById("btn-stop");
-const btnAnalyze = document.getElementById("btn-analyze");
 const btnSidePanel = document.getElementById("btn-sidepanel");
 const btnOptions = document.getElementById("btn-options");
 const statusBar = document.getElementById("status-bar");
@@ -46,8 +45,12 @@ btnStart.addEventListener("click", async () => {
   clearError();
   const tabId = await currentTabId();
   if (!tabId) return showError("No active tab found.");
+
+  // Open side panel first, then start capture
+  chrome.sidePanel.open({ tabId });
   chrome.runtime.sendMessage({ action: "startCapture", tabId }, (res) => {
     if (res?.status === "started") updateUI(true);
+    else if (res?.error) showError(res.error);
   });
 });
 
@@ -56,13 +59,6 @@ btnStop.addEventListener("click", () => {
   chrome.runtime.sendMessage({ action: "stopCapture" }, (res) => {
     if (res?.status === "stopped") updateUI(false);
   });
-});
-
-btnAnalyze.addEventListener("click", async () => {
-  clearError();
-  const tabId = await currentTabId();
-  if (!tabId) return showError("No active tab found.");
-  chrome.runtime.sendMessage({ action: "analyzeNow", tabId });
 });
 
 btnSidePanel.addEventListener("click", async () => {
