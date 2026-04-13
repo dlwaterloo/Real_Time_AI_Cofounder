@@ -191,7 +191,7 @@ function sendVideoFrame(base64Jpeg) {
 
   const msg = {
     realtimeInput: {
-      media: {
+      video: {
         mimeType: "image/jpeg",
         data: base64Jpeg,
       },
