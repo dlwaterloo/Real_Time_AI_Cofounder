@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Real-Time AI Cofounder",
-  "version": "2.0.0",
-  "description": "A Chrome extension that captures your screen as real-time video and provides streaming AI-powered feedback.",
+  "version": "3.0.0",
+  "description": "A Chrome extension that streams your browser tab as live video to Google Gemini Live API and provides real-time AI feedback via WebSocket.",
   "permissions": [
     "activeTab",
     "sidePanel",

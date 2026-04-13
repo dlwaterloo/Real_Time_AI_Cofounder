@@ -1,7 +1,5 @@
 const form = document.getElementById("settings-form");
 const apiKeyInput = document.getElementById("api-key");
-const providerSelect = document.getElementById("ai-provider");
-const modelNameInput = document.getElementById("model-name");
 const captureFreqInput = document.getElementById("capture-freq");
 const customPromptInput = document.getElementById("custom-prompt");
 const saveMsg = document.getElementById("save-msg");
@@ -13,14 +11,10 @@ chrome.storage.local.get({ apiKey: "" }, (local) => {
 });
 chrome.storage.sync.get(
   {
-    aiProvider: "openai",
-    modelName: "",
-    captureFrequency: 2,
+    captureFrequency: 1,
     customPrompt: "",
   },
   (items) => {
-    providerSelect.value = items.aiProvider;
-    modelNameInput.value = items.modelName;
     captureFreqInput.value = items.captureFrequency;
     customPromptInput.value = items.customPrompt;
   }
@@ -35,9 +29,7 @@ form.addEventListener("submit", (e) => {
   // Save other settings to sync storage
   chrome.storage.sync.set(
     {
-      aiProvider: providerSelect.value,
-      modelName: modelNameInput.value.trim(),
-      captureFrequency: parseInt(captureFreqInput.value, 10) || 5,
+      captureFrequency: parseInt(captureFreqInput.value, 10) || 1,
       customPrompt: customPromptInput.value.trim(),
     },
     () => {

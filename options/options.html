@@ -11,28 +11,20 @@
     <form id="settings-form">
       <!-- AI Provider -->
       <fieldset>
-        <legend>AI Provider</legend>
+        <legend>Google Gemini</legend>
 
-        <label for="ai-provider">Provider</label>
-        <select id="ai-provider">
-          <option value="openai">OpenAI (GPT-4o)</option>
-          <option value="anthropic">Anthropic (Claude)</option>
-        </select>
-
-        <label for="api-key">API Key</label>
-        <input id="api-key" type="password" placeholder="sk-… or sk-ant-…" autocomplete="off" />
-
-        <label for="model-name">Model Name <span class="hint">(optional override)</span></label>
-        <input id="model-name" type="text" placeholder="e.g. gpt-4o, claude-sonnet-4-20250514" />
+        <label for="api-key">Gemini API Key</label>
+        <input id="api-key" type="password" placeholder="AIza…" autocomplete="off" />
+        <p class="hint">Get your API key from <a href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio</a>.</p>
       </fieldset>
 
       <!-- Capture settings -->
       <fieldset>
         <legend>Capture Settings</legend>
 
-        <label for="capture-freq">Frame Sampling Interval (seconds)</label>
-        <input id="capture-freq" type="number" min="1" max="60" value="2" />
-        <p class="hint">How often a frame is sampled from the live video and sent to the AI. Lower = faster feedback but more API calls.</p>
+        <label for="capture-freq">Video Frame Rate (seconds per frame)</label>
+        <input id="capture-freq" type="number" min="1" max="10" value="1" />
+        <p class="hint">How often a frame is sent to Gemini Live API. 1 = one frame per second (recommended). Gemini supports up to 1 FPS for images.</p>
       </fieldset>
 
       <!-- Custom Prompt -->

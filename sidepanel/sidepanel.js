@@ -12,11 +12,17 @@ const btnStop = document.getElementById("btn-stop");
 
 // ─── State ───────────────────────────────────────────────────────────────────
 let mediaStream = null;
-let captureTimer = null;
-let isAnalyzing = false;
-let currentAbort = null;
+let frameTimer = null;
+let geminiWs = null;
+let geminiReady = false;
+let currentResponseText = "";
+let isReceivingResponse = false;
 const canvas = document.createElement("canvas");
 const ctx = canvas.getContext("2d");
+
+// Gemini Live API constants
+const GEMINI_WS_BASE =
+  "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent";
 
 // ─── Render helpers ──────────────────────────────────────────────────────────
 function setStatus(state, text) {
@@ -54,6 +60,154 @@ function renderMarkdown(text) {
   return "<p>" + html + "</p>";
 }
 
+// ─── Gemini Live WebSocket ──────────────────────────────────────────────────
+async function connectGemini(apiKey, systemPrompt) {
+  return new Promise((resolve, reject) => {
+    const wsUrl = GEMINI_WS_BASE + "?key=" + apiKey;
+    geminiWs = new WebSocket(wsUrl);
+
+    geminiWs.onopen = () => {
+      console.log("[Gemini] WebSocket connected, sending setup");
+
+      const setupMsg = {
+        setup: {
+          model: "models/gemini-2.0-flash-live-001",
+          generationConfig: {
+            responseModalities: ["TEXT"],
+            temperature: 0.7,
+            maxOutputTokens: 512,
+          },
+          systemInstruction: {
+            parts: [{ text: systemPrompt }],
+          },
+        },
+      };
+      geminiWs.send(JSON.stringify(setupMsg));
+    };
+
+    geminiWs.onmessage = (event) => {
+      handleGeminiMessage(event);
+
+      // Resolve the promise once setup is complete
+      if (!geminiReady) {
+        try {
+          const raw = event.data instanceof Blob ? null : event.data;
+          if (raw) {
+            const data = JSON.parse(raw);
+            if (data.setupComplete) {
+              geminiReady = true;
+              console.log("[Gemini] Setup complete, ready for video frames");
+              resolve();
+            }
+          }
+        } catch {
+          // Blob data handled async in handleGeminiMessage
+        }
+      }
+    };
+
+    geminiWs.onerror = (err) => {
+      console.error("[Gemini] WebSocket error:", err);
+      reject(new Error("Gemini WebSocket connection failed"));
+    };
+
+    geminiWs.onclose = (event) => {
+      console.log("[Gemini] WebSocket closed:", event.code, event.reason);
+      geminiReady = false;
+      geminiWs = null;
+    };
+
+    // Timeout after 10 seconds
+    setTimeout(() => {
+      if (!geminiReady) {
+        reject(new Error("Gemini WebSocket setup timed out"));
+      }
+    }, 10000);
+  });
+}
+
+async function handleGeminiMessage(event) {
+  let data;
+  try {
+    if (event.data instanceof Blob) {
+      const text = await event.data.text();
+      data = JSON.parse(text);
+    } else {
+      data = JSON.parse(event.data);
+    }
+  } catch (err) {
+    console.error("[Gemini] Failed to parse message:", err);
+    return;
+  }
+
+  // Setup complete — handled in connectGemini promise
+  if (data.setupComplete) return;
+
+  const serverContent = data.serverContent;
+  if (!serverContent) return;
+
+  // Text content from model turn
+  const parts = serverContent.modelTurn?.parts;
+  if (parts) {
+    for (const part of parts) {
+      if (part.text) {
+        if (!isReceivingResponse) {
+          // First token — show streaming card
+          isReceivingResponse = true;
+          streamingCard.classList.remove("hidden");
+          streamingBody.innerHTML = '<span class="cursor-blink"></span>';
+          streamingTime.textContent = formatTime(new Date().toISOString());
+          currentResponseText = "";
+        }
+        currentResponseText += part.text;
+        appendStreamingToken(part.text);
+      }
+    }
+  }
+
+  // Interrupted — the model was interrupted by new input
+  if (serverContent.interrupted) {
+    console.log("[Gemini] Response interrupted by new input");
+  }
+
+  // Turn complete — finalize current response
+  if (serverContent.turnComplete) {
+    if (isReceivingResponse && currentResponseText.trim()) {
+      streamingCard.classList.add("hidden");
+      addCard({
+        feedback: currentResponseText,
+        timestamp: new Date().toISOString(),
+      });
+    }
+    isReceivingResponse = false;
+    currentResponseText = "";
+  }
+}
+
+function sendVideoFrame(base64Jpeg) {
+  if (!geminiWs || geminiWs.readyState !== WebSocket.OPEN || !geminiReady) {
+    return;
+  }
+
+  const msg = {
+    realtimeInput: {
+      media: {
+        mimeType: "image/jpeg",
+        data: base64Jpeg,
+      },
+    },
+  };
+  geminiWs.send(JSON.stringify(msg));
+}
+
+function disconnectGemini() {
+  geminiReady = false;
+  if (geminiWs) {
+    geminiWs.close();
+    geminiWs = null;
+  }
+}
+
 // ─── Video stream ────────────────────────────────────────────────────────────
 async function startStream(streamId) {
   try {
@@ -70,88 +224,24 @@ async function startStream(streamId) {
     videoContainer.classList.remove("hidden");
     emptyState.style.display = "none";
     btnStop.classList.remove("hidden");
-    setStatus("running", "Live — Monitoring active");
+    setStatus("running", "Live — Connecting to Gemini");
 
-    // Start the capture loop once video is ready
-    const settings = await chrome.storage.sync.get({ captureFrequency: 2 });
-    const intervalMs = Math.max(settings.captureFrequency * 1000, 1000);
-
-    videoEl.addEventListener(
-      "loadeddata",
-      () => {
-        analyzeCurrentFrame();
-        captureTimer = setInterval(() => {
-          if (!isAnalyzing) analyzeCurrentFrame();
-        }, intervalMs);
-      },
-      { once: true }
-    );
-  } catch (err) {
-    console.error("Stream setup error:", err);
-    addCard({
-      error: "Failed to start video capture: " + err.message,
-      timestamp: new Date().toISOString(),
-    });
-  }
-}
-
-function stopStream() {
-  if (captureTimer) {
-    clearInterval(captureTimer);
-    captureTimer = null;
-  }
-  if (currentAbort) {
-    currentAbort.abort();
-    currentAbort = null;
-  }
-  if (mediaStream) {
-    mediaStream.getTracks().forEach((t) => t.stop());
-    mediaStream = null;
-  }
-  videoEl.srcObject = null;
-  videoContainer.classList.add("hidden");
-  streamingCard.classList.add("hidden");
-  btnStop.classList.add("hidden");
-  isAnalyzing = false;
-  setStatus("stopped", "Stopped");
-
-  chrome.runtime.sendMessage({ action: "stopCapture" });
-}
-
-// ─── Frame capture & streaming analysis ──────────────────────────────────────
-async function analyzeCurrentFrame() {
-  if (!mediaStream || !videoEl.videoWidth) return;
-
-  isAnalyzing = true;
-  const timestamp = new Date().toISOString();
-
-  // Grab a frame from the live video
-  canvas.width = videoEl.videoWidth;
-  canvas.height = videoEl.videoHeight;
-  ctx.drawImage(videoEl, 0, 0);
-  const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
-  const base64Image = dataUrl.split(",")[1];
-
-  setStatus("analyzing", "Analyzing frame…");
-
-  // Show streaming card with blinking cursor
-  streamingCard.classList.remove("hidden");
-  streamingBody.innerHTML = '<span class="cursor-blink"></span>';
-  streamingTime.textContent = formatTime(timestamp);
-
-  try {
+    // Load settings and connect to Gemini
     const localSettings = await chrome.storage.local.get({ apiKey: "" });
     const syncSettings = await chrome.storage.sync.get({
-      aiProvider: "openai",
       customPrompt: "",
-      modelName: "",
+      captureFrequency: 1,
     });
 
     const apiKey = localSettings.apiKey;
     if (!apiKey) {
-      throw new Error(
-        "API key not configured. Please set your API key in the extension options."
-      );
+      addCard({
+        error:
+          "Gemini API key not configured. Please set your API key in the extension options.",
+        timestamp: new Date().toISOString(),
+      });
+      setStatus("running", "Live — No API key");
+      return;
     }
 
     // Get current tab info for context
@@ -163,208 +253,83 @@ async function analyzeCurrentFrame() {
     const pageTitle = tab?.title || "Unknown";
     const pageUrl = tab?.url || "";
 
-    const systemPrompt = `You are a real-time AI co-founder watching a live video feed of a user's browser. Provide concise, actionable feedback. Be brief — you will be called frequently.
+    const systemPrompt =
+      "You are a real-time AI co-founder watching a live video stream of a user's browser tab. " +
+      "You receive continuous video frames and should provide concise, actionable feedback as things change on screen. " +
+      "Be brief and focus on what's most important. Do not repeat yourself if the screen hasn't changed.\n\n" +
+      "Currently viewing: " + pageTitle + " (" + pageUrl + ")" +
+      (syncSettings.customPrompt
+        ? "\n\nAdditional context: " + syncSettings.customPrompt
+        : "");
 
-Currently viewing: ${pageTitle} (${pageUrl})
+    try {
+      await connectGemini(apiKey, systemPrompt);
+      setStatus("running", "Live — Streaming to Gemini");
 
-${syncSettings.customPrompt ? "Context: " + syncSettings.customPrompt : ""}`;
+      // Start sending video frames at configured interval
+      const intervalMs = Math.max(syncSettings.captureFrequency * 1000, 1000);
 
-    const fullText = await streamAnalysis(
-      syncSettings.aiProvider,
-      apiKey,
-      systemPrompt,
-      base64Image,
-      syncSettings.modelName
-    );
-
-    // Move completed response into feed
-    streamingCard.classList.add("hidden");
-    addCard({
-      feedback: fullText,
-      timestamp,
-      url: pageUrl,
-      title: pageTitle,
-      screenshot: dataUrl,
-    });
-
-    setStatus("running", "Live — Monitoring active");
-  } catch (err) {
-    console.error("Analysis error:", err);
-    streamingCard.classList.add("hidden");
-    addCard({ error: err.message, timestamp });
-    setStatus("running", "Live — Monitoring active");
-  }
-
-  isAnalyzing = false;
-}
-
-// ─── Streaming AI calls ─────────────────────────────────────────────────────
-async function streamAnalysis(
-  provider,
-  apiKey,
-  systemPrompt,
-  base64Image,
-  modelName
-) {
-  currentAbort = new AbortController();
-
-  if (provider === "openai") {
-    return streamOpenAI(
-      apiKey,
-      systemPrompt,
-      base64Image,
-      modelName,
-      currentAbort.signal
-    );
-  } else if (provider === "anthropic") {
-    return streamAnthropic(
-      apiKey,
-      systemPrompt,
-      base64Image,
-      modelName,
-      currentAbort.signal
-    );
-  }
-  throw new Error("Unknown AI provider: " + provider);
-}
-
-async function streamOpenAI(apiKey, systemPrompt, base64Image, modelName, signal) {
-  const model = modelName || "gpt-4o";
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    signal,
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: 512,
-      stream: true,
-      messages: [
-        { role: "system", content: systemPrompt },
-        {
-          role: "user",
-          content: [
-            {
-              type: "image_url",
-              image_url: {
-                url: `data:image/jpeg;base64,${base64Image}`,
-                detail: "low",
-              },
-            },
-            {
-              type: "text",
-              text: "What do you see? Brief, actionable feedback.",
-            },
-          ],
+      videoEl.addEventListener(
+        "loadeddata",
+        () => {
+          sendCurrentFrame();
+          frameTimer = setInterval(sendCurrentFrame, intervalMs);
         },
-      ],
-    }),
-  });
+        { once: true }
+      );
 
-  if (!response.ok) {
-    const errText = await response.text();
-    throw new Error(`OpenAI API error (${response.status}): ${errText}`);
-  }
-
-  return readSSE(response, (chunk) => {
-    const content = chunk.choices?.[0]?.delta?.content;
-    if (content) appendStreamingToken(content);
-    return content || "";
-  });
-}
-
-async function streamAnthropic(
-  apiKey,
-  systemPrompt,
-  base64Image,
-  modelName,
-  signal
-) {
-  const model = modelName || "claude-sonnet-4-20250514";
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    signal,
-    headers: {
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-      "Content-Type": "application/json",
-      "anthropic-dangerous-direct-browser-access": "true",
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: 512,
-      stream: true,
-      system: systemPrompt,
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "image",
-              source: {
-                type: "base64",
-                media_type: "image/jpeg",
-                data: base64Image,
-              },
-            },
-            {
-              type: "text",
-              text: "What do you see? Brief, actionable feedback.",
-            },
-          ],
-        },
-      ],
-    }),
-  });
-
-  if (!response.ok) {
-    const errText = await response.text();
-    throw new Error(`Anthropic API error (${response.status}): ${errText}`);
-  }
-
-  return readSSE(response, (chunk) => {
-    if (chunk.type === "content_block_delta" && chunk.delta?.text) {
-      appendStreamingToken(chunk.delta.text);
-      return chunk.delta.text;
-    }
-    return "";
-  });
-}
-
-// ─── SSE parser ──────────────────────────────────────────────────────────────
-async function readSSE(response, onChunk) {
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-  let fullText = "";
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split("\n");
-    buffer = lines.pop() || "";
-
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith(":")) continue;
-      if (trimmed.startsWith("data: ")) {
-        const data = trimmed.slice(6);
-        if (data === "[DONE]") continue;
-        try {
-          const parsed = JSON.parse(data);
-          fullText += onChunk(parsed);
-        } catch {
-          // ignore malformed chunks
-        }
+      // If video is already loaded
+      if (videoEl.readyState >= 2) {
+        sendCurrentFrame();
+        frameTimer = setInterval(sendCurrentFrame, intervalMs);
       }
+    } catch (err) {
+      console.error("[Gemini] Connection error:", err);
+      addCard({
+        error: "Failed to connect to Gemini: " + err.message,
+        timestamp: new Date().toISOString(),
+      });
+      setStatus("running", "Live — Gemini disconnected");
     }
+  } catch (err) {
+    console.error("Stream setup error:", err);
+    addCard({
+      error: "Failed to start video capture: " + err.message,
+      timestamp: new Date().toISOString(),
+    });
   }
+}
 
-  return fullText;
+function sendCurrentFrame() {
+  if (!mediaStream || !videoEl.videoWidth) return;
+
+  canvas.width = videoEl.videoWidth;
+  canvas.height = videoEl.videoHeight;
+  ctx.drawImage(videoEl, 0, 0);
+  const dataUrl = canvas.toDataURL("image/jpeg", 0.6);
+  const base64 = dataUrl.split(",")[1];
+  sendVideoFrame(base64);
+}
+
+function stopStream() {
+  if (frameTimer) {
+    clearInterval(frameTimer);
+    frameTimer = null;
+  }
+  disconnectGemini();
+  if (mediaStream) {
+    mediaStream.getTracks().forEach((t) => t.stop());
+    mediaStream = null;
+  }
+  videoEl.srcObject = null;
+  videoContainer.classList.add("hidden");
+  streamingCard.classList.add("hidden");
+  btnStop.classList.add("hidden");
+  isReceivingResponse = false;
+  currentResponseText = "";
+  setStatus("stopped", "Stopped");
+
+  chrome.runtime.sendMessage({ action: "stopCapture" });
 }
 
 function appendStreamingToken(text) {
