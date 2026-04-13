@@ -83,7 +83,7 @@ A Chrome extension that captures your browser screen in real time and provides A
 ## Privacy
 
 - Screenshots are sent directly from your browser to the AI provider's API. No data is stored on any intermediate server.
-- Your API key is stored locally in Chrome's `chrome.storage.sync` and is never shared.
+- Your API key is stored locally in Chrome's `chrome.storage.local` (device-only, not synced across browsers) and is never shared.
 
 ## License
 
