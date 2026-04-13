@@ -69,5 +69,5 @@ function broadcast(message) {
 }
 
 function broadcastStatus() {
-  broadcast({ type: "statusUpdate", data: { isCapturing } });
+  broadcast({ type: "statusUpdate", data: { isCapturing, activeTabId } });
 }
