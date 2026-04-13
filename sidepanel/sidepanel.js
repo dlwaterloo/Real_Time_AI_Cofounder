@@ -71,17 +71,16 @@ async function connectGemini(apiKey, systemPrompt) {
 
       const setupMsg = {
         setup: {
-          model: "models/gemini-2.0-flash-live-001",
+          model: "models/gemini-2.5-flash-native-audio-latest",
           generationConfig: {
-            responseModalities: ["TEXT"],
-            temperature: 0.7,
-            maxOutputTokens: 512,
+            responseModalities: ["AUDIO"],
           },
           systemInstruction: {
             parts: [{ text: systemPrompt }],
           },
         },
       };
+      console.log("[Gemini] Sending setup:", JSON.stringify(setupMsg));
       geminiWs.send(JSON.stringify(setupMsg));
     };
 
