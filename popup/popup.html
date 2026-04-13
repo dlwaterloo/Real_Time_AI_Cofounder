@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">🤖</div>
+      <h1>AI Cofounder</h1>
+      <p class="subtitle">Real-time screen analysis</p>
+    </header>
+
+    <div id="status-bar" class="status-bar stopped">
+      <span class="status-dot"></span>
+      <span id="status-text">Stopped</span>
+    </div>
+
+    <div class="controls">
+      <button id="btn-start" class="btn btn-primary">▶ Start Monitoring</button>
+      <button id="btn-stop" class="btn btn-danger" disabled>⏹ Stop</button>
+    </div>
+
+    <div class="actions">
+      <button id="btn-sidepanel" class="btn btn-outline">Open Side Panel</button>
+      <button id="btn-options" class="btn btn-outline">⚙ Settings</button>
+    </div>
+
+    <p id="error-msg" class="error hidden"></p>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

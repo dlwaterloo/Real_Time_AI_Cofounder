@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="stylesheet" href="options.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>🤖 AI Cofounder — Settings</h1>
+
+    <form id="settings-form">
+      <!-- AI Provider -->
+      <fieldset>
+        <legend>Google Gemini</legend>
+
+        <label for="api-key">Gemini API Key</label>
+        <input id="api-key" type="password" placeholder="AIza…" autocomplete="off" />
+        <p class="hint">Get your API key from <a href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio</a>.</p>
+      </fieldset>
+
+      <!-- Capture settings -->
+      <fieldset>
+        <legend>Capture Settings</legend>
+
+        <label for="capture-freq">Video Frame Rate (seconds per frame)</label>
+        <input id="capture-freq" type="number" min="1" max="10" value="1" />
+        <p class="hint">How often a frame is sent to Gemini Live API. 1 = one frame per second (recommended). Gemini supports up to 1 FPS for images.</p>
+      </fieldset>
+
+      <!-- Custom Prompt -->
+      <fieldset>
+        <legend>Custom Context</legend>
+
+        <label for="custom-prompt">Additional Prompt / Context</label>
+        <textarea id="custom-prompt" rows="4" placeholder="e.g. I'm a product manager evaluating competitor landing pages. Focus on UX issues and conversion optimization."></textarea>
+        <p class="hint">Give the AI more context about what you're working on for better feedback.</p>
+      </fieldset>
+
+      <button type="submit" class="btn btn-primary">💾 Save Settings</button>
+      <p id="save-msg" class="save-msg hidden">Settings saved!</p>
+    </form>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>

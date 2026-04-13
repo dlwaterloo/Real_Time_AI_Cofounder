@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="stylesheet" href="sidepanel.css" />
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="header-top">
+        <h1>🤖 AI Cofounder</h1>
+        <button id="btn-stop" class="btn-stop hidden" title="Stop monitoring">⏹</button>
+      </div>
+      <div id="status" class="status stopped">
+        <span class="status-dot"></span>
+        <span id="status-text">Waiting for capture…</span>
+      </div>
+    </header>
+
+    <!-- Live video preview -->
+    <div id="video-container" class="video-container hidden">
+      <video id="preview" autoplay muted playsinline></video>
+      <div class="video-overlay">
+        <span class="live-badge">● LIVE</span>
+      </div>
+    </div>
+
+    <!-- Continuous streaming text area -->
+    <div id="stream-output" class="stream-output">
+      <div id="empty-state" class="empty-state">
+        <p>Click <strong>Start Monitoring</strong> in the popup to begin real-time video analysis.</p>
+      </div>
+      <div id="stream-text" class="stream-text"></div>
+    </div>
+  </div>
+
+  <script src="sidepanel.js"></script>
+</body>
+</html>
