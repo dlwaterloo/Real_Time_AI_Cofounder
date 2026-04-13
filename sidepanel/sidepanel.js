@@ -13,6 +13,8 @@ const btnStop = document.getElementById("btn-stop");
 // ─── State ───────────────────────────────────────────────────────────────────
 let mediaStream = null;
 let frameTimer = null;
+let promptTimer = null;
+let framesSinceLastPrompt = 0;
 let geminiWs = null;
 let geminiReady = false;
 let currentResponseText = "";
@@ -190,6 +192,34 @@ function sendVideoFrame(base64Jpeg) {
     },
   };
   geminiWs.send(JSON.stringify(msg));
+  framesSinceLastPrompt++;
+}
+
+function sendAnalysisPrompt() {
+  if (!geminiWs || geminiWs.readyState !== WebSocket.OPEN || !geminiReady) {
+    return;
+  }
+  if (isReceivingResponse) return; // don't interrupt ongoing response
+  if (framesSinceLastPrompt < 1) return; // no new frames since last prompt
+
+  const msg = {
+    clientContent: {
+      turns: [
+        {
+          role: "user",
+          parts: [
+            {
+              text: "Analyze the current screen content. What do you see? Provide brief, actionable feedback.",
+            },
+          ],
+        },
+      ],
+      turnComplete: true,
+    },
+  };
+  geminiWs.send(JSON.stringify(msg));
+  framesSinceLastPrompt = 0;
+  console.log("[Gemini] Sent analysis prompt");
 }
 
 function disconnectGemini() {
@@ -260,20 +290,22 @@ async function startStream(streamId) {
 
       // Start sending video frames at configured interval
       const intervalMs = Math.max(syncSettings.captureFrequency * 1000, 1000);
+      // Prompt for analysis every ~5 seconds (after accumulating frames)
+      const promptIntervalMs = 5000;
 
-      videoEl.addEventListener(
-        "loadeddata",
-        () => {
-          sendCurrentFrame();
-          frameTimer = setInterval(sendCurrentFrame, intervalMs);
-        },
-        { once: true }
-      );
+      const beginStreaming = () => {
+        sendCurrentFrame();
+        frameTimer = setInterval(sendCurrentFrame, intervalMs);
+        promptTimer = setInterval(sendAnalysisPrompt, promptIntervalMs);
+        // Send first analysis prompt after a short delay to let frames accumulate
+        setTimeout(sendAnalysisPrompt, 3000);
+      };
+
+      videoEl.addEventListener("loadeddata", beginStreaming, { once: true });
 
       // If video is already loaded
       if (videoEl.readyState >= 2) {
-        sendCurrentFrame();
-        frameTimer = setInterval(sendCurrentFrame, intervalMs);
+        beginStreaming();
       }
     } catch (err) {
       console.error("[Gemini] Connection error:", err);
@@ -308,6 +340,11 @@ function stopStream() {
     clearInterval(frameTimer);
     frameTimer = null;
   }
+  if (promptTimer) {
+    clearInterval(promptTimer);
+    promptTimer = null;
+  }
+  framesSinceLastPrompt = 0;
   disconnectGemini();
   if (mediaStream) {
     mediaStream.getTracks().forEach((t) => t.stop());
