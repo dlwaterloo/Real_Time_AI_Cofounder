@@ -84,25 +84,31 @@ async function connectGemini(apiKey, systemPrompt) {
       geminiWs.send(JSON.stringify(setupMsg));
     };
 
-    geminiWs.onmessage = (event) => {
-      handleGeminiMessage(event);
+    geminiWs.onmessage = async (event) => {
+      // Parse message data (may be text string or Blob)
+      let data;
+      try {
+        if (event.data instanceof Blob) {
+          const text = await event.data.text();
+          data = JSON.parse(text);
+        } else {
+          data = JSON.parse(event.data);
+        }
+      } catch (err) {
+        console.error("[Gemini] Failed to parse message in onmessage:", err);
+        return;
+      }
 
       // Resolve the promise once setup is complete
-      if (!geminiReady) {
-        try {
-          const raw = event.data instanceof Blob ? null : event.data;
-          if (raw) {
-            const data = JSON.parse(raw);
-            if (data.setupComplete) {
-              geminiReady = true;
-              console.log("[Gemini] Setup complete, ready for video frames");
-              resolve();
-            }
-          }
-        } catch {
-          // Blob data handled async in handleGeminiMessage
-        }
+      if (!geminiReady && data.setupComplete) {
+        geminiReady = true;
+        console.log("[Gemini] Setup complete, ready for video frames");
+        resolve();
+        return;
       }
+
+      // Forward to response handler
+      handleGeminiResponse(data);
     };
 
     geminiWs.onerror = (err) => {
@@ -125,20 +131,7 @@ async function connectGemini(apiKey, systemPrompt) {
   });
 }
 
-async function handleGeminiMessage(event) {
-  let data;
-  try {
-    if (event.data instanceof Blob) {
-      const text = await event.data.text();
-      data = JSON.parse(text);
-    } else {
-      data = JSON.parse(event.data);
-    }
-  } catch (err) {
-    console.error("[Gemini] Failed to parse message:", err);
-    return;
-  }
-
+function handleGeminiResponse(data) {
   // Setup complete — handled in connectGemini promise
   if (data.setupComplete) return;
 
