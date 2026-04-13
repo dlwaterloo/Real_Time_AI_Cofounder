@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="stylesheet" href="options.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>🤖 AI Cofounder — Settings</h1>
+
+    <form id="settings-form">
+      <!-- AI Provider -->
+      <fieldset>
+        <legend>AI Provider</legend>
+
+        <label for="ai-provider">Provider</label>
+        <select id="ai-provider">
+          <option value="openai">OpenAI (GPT-4o)</option>
+          <option value="anthropic">Anthropic (Claude)</option>
+        </select>
+
+        <label for="api-key">API Key</label>
+        <input id="api-key" type="password" placeholder="sk-… or sk-ant-…" autocomplete="off" />
+
+        <label for="model-name">Model Name <span class="hint">(optional override)</span></label>
+        <input id="model-name" type="text" placeholder="e.g. gpt-4o, claude-sonnet-4-20250514" />
+      </fieldset>
+
+      <!-- Capture settings -->
+      <fieldset>
+        <legend>Capture Settings</legend>
+
+        <label for="capture-freq">Capture Frequency (seconds)</label>
+        <input id="capture-freq" type="number" min="2" max="120" value="5" />
+        <p class="hint">How often the extension captures and analyzes the screen. Lower = more API calls.</p>
+      </fieldset>
+
+      <!-- Custom Prompt -->
+      <fieldset>
+        <legend>Custom Context</legend>
+
+        <label for="custom-prompt">Additional Prompt / Context</label>
+        <textarea id="custom-prompt" rows="4" placeholder="e.g. I'm a product manager evaluating competitor landing pages. Focus on UX issues and conversion optimization."></textarea>
+        <p class="hint">Give the AI more context about what you're working on for better feedback.</p>
+      </fieldset>
+
+      <button type="submit" class="btn btn-primary">💾 Save Settings</button>
+      <p id="save-msg" class="save-msg hidden">Settings saved!</p>
+    </form>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>

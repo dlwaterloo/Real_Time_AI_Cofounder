@@ -1,0 +1,151 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  width: 320px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #0f0f1a;
+  color: #e0e0e0;
+}
+
+.container {
+  padding: 20px;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.logo {
+  font-size: 32px;
+  margin-bottom: 4px;
+}
+
+h1 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.subtitle {
+  font-size: 12px;
+  color: #888;
+  margin-top: 2px;
+}
+
+/* ── Status bar ────────────────────────────────────────────────────────────── */
+.status-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.status-bar.stopped {
+  background: rgba(255, 60, 60, 0.12);
+  color: #ff6b6b;
+}
+
+.status-bar.running {
+  background: rgba(0, 210, 120, 0.12);
+  color: #00d278;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.stopped .status-dot {
+  background: #ff6b6b;
+}
+
+.running .status-dot {
+  background: #00d278;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* ── Buttons ───────────────────────────────────────────────────────────────── */
+.controls, .actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.btn {
+  padding: 10px 14px;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: #4f6ef7;
+  color: #fff;
+}
+.btn-primary:hover:not(:disabled) {
+  background: #3b5de7;
+}
+
+.btn-danger {
+  background: #e03e3e;
+  color: #fff;
+}
+.btn-danger:hover:not(:disabled) {
+  background: #c53030;
+}
+
+.btn-secondary {
+  background: #2a2a3d;
+  color: #b0b0c0;
+}
+.btn-secondary:hover:not(:disabled) {
+  background: #35354d;
+}
+
+.btn-outline {
+  background: transparent;
+  border: 1px solid #3a3a50;
+  color: #b0b0c0;
+}
+.btn-outline:hover {
+  background: #1e1e30;
+}
+
+/* ── Error ─────────────────────────────────────────────────────────────────── */
+.error {
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: rgba(255, 60, 60, 0.12);
+  color: #ff6b6b;
+  font-size: 12px;
+}
+
+.hidden {
+  display: none;
+}
