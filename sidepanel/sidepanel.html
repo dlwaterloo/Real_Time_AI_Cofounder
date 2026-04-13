@@ -25,22 +25,13 @@
       </div>
     </div>
 
-    <!-- Current streaming feedback -->
-    <div id="streaming-card" class="streaming-card hidden">
-      <div class="streaming-header">
-        <span class="streaming-title">AI Feedback</span>
-        <span id="streaming-time" class="streaming-time"></span>
+    <!-- Continuous streaming text area -->
+    <div id="stream-output" class="stream-output">
+      <div id="empty-state" class="empty-state">
+        <p>Click <strong>Start Monitoring</strong> in the popup to begin real-time video analysis.</p>
       </div>
-      <div id="streaming-body" class="streaming-body">
-        <span class="cursor-blink"></span>
-      </div>
+      <div id="stream-text" class="stream-text"></div>
     </div>
-
-    <div id="empty-state" class="empty-state">
-      <p>Click <strong>Start Monitoring</strong> in the popup to begin real-time video analysis.</p>
-    </div>
-
-    <div id="feed" class="feed"></div>
   </div>
 
   <script src="sidepanel.js"></script>

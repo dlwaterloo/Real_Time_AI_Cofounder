@@ -1,13 +1,11 @@
 // ─── DOM elements ────────────────────────────────────────────────────────────
-const feed = document.getElementById("feed");
 const emptyState = document.getElementById("empty-state");
 const statusEl = document.getElementById("status");
 const statusText = document.getElementById("status-text");
 const videoContainer = document.getElementById("video-container");
 const videoEl = document.getElementById("preview");
-const streamingCard = document.getElementById("streaming-card");
-const streamingBody = document.getElementById("streaming-body");
-const streamingTime = document.getElementById("streaming-time");
+const streamOutput = document.getElementById("stream-output");
+const streamText = document.getElementById("stream-text");
 const btnStop = document.getElementById("btn-stop");
 
 // ─── State ───────────────────────────────────────────────────────────────────
@@ -17,7 +15,6 @@ let promptTimer = null;
 let framesSinceLastPrompt = 0;
 let geminiWs = null;
 let geminiReady = false;
-let currentResponseText = "";
 let isReceivingResponse = false;
 const canvas = document.createElement("canvas");
 const ctx = canvas.getContext("2d");
@@ -32,34 +29,48 @@ function setStatus(state, text) {
   statusText.textContent = text;
 }
 
-function formatTime(iso) {
-  const d = new Date(iso);
-  return d.toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
+// ─── Streaming text helpers ─────────────────────────────────────────────────
+function appendToken(text) {
+  // Remove existing cursor
+  const cursor = streamText.querySelector(".cursor-blink");
+  if (cursor) cursor.remove();
+
+  // Append text
+  streamText.appendChild(document.createTextNode(text));
+
+  // Re-add cursor
+  const newCursor = document.createElement("span");
+  newCursor.className = "cursor-blink";
+  streamText.appendChild(newCursor);
+
+  // Auto-scroll to bottom
+  streamOutput.scrollTop = streamOutput.scrollHeight;
 }
 
-function escapeHTML(str) {
-  const div = document.createElement("div");
-  div.textContent = str;
-  return div.innerHTML;
+function addSeparator() {
+  const cursor = streamText.querySelector(".cursor-blink");
+  if (cursor) cursor.remove();
+
+  // Add a visual break between responses
+  const sep = document.createElement("div");
+  sep.className = "response-separator";
+  streamText.appendChild(sep);
+
+  streamOutput.scrollTop = streamOutput.scrollHeight;
 }
 
-function renderMarkdown(text) {
-  let html = text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-  html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
-  html = html.replace(/`(.+?)`/g, "<code>$1</code>");
-  html = html.replace(/^[-•]\s+(.+)$/gm, "<li>$1</li>");
-  html = html.replace(/^\d+\.\s+(.+)$/gm, "<li>$1</li>");
-  html = html.replace(/((?:<li>.*<\/li>\n?)+)/g, "<ul>$1</ul>");
-  html = html.replace(/\n{2,}/g, "</p><p>");
-  html = html.replace(/\n/g, "<br>");
-  return "<p>" + html + "</p>";
+function showError(message) {
+  emptyState.style.display = "none";
+
+  const cursor = streamText.querySelector(".cursor-blink");
+  if (cursor) cursor.remove();
+
+  const errorEl = document.createElement("div");
+  errorEl.className = "stream-error";
+  errorEl.textContent = message;
+  streamText.appendChild(errorEl);
+
+  streamOutput.scrollTop = streamOutput.scrollHeight;
 }
 
 // ─── Gemini Live WebSocket ──────────────────────────────────────────────────
@@ -146,15 +157,11 @@ function handleGeminiResponse(data) {
     for (const part of parts) {
       if (part.text) {
         if (!isReceivingResponse) {
-          // First token — show streaming card
+          // First token of a new response
           isReceivingResponse = true;
-          streamingCard.classList.remove("hidden");
-          streamingBody.innerHTML = '<span class="cursor-blink"></span>';
-          streamingTime.textContent = formatTime(new Date().toISOString());
-          currentResponseText = "";
+          emptyState.style.display = "none";
         }
-        currentResponseText += part.text;
-        appendStreamingToken(part.text);
+        appendToken(part.text);
       }
     }
   }
@@ -164,17 +171,12 @@ function handleGeminiResponse(data) {
     console.log("[Gemini] Response interrupted by new input");
   }
 
-  // Turn complete — finalize current response
+  // Turn complete — add separator for next response
   if (serverContent.turnComplete) {
-    if (isReceivingResponse && currentResponseText.trim()) {
-      streamingCard.classList.add("hidden");
-      addCard({
-        feedback: currentResponseText,
-        timestamp: new Date().toISOString(),
-      });
+    if (isReceivingResponse) {
+      addSeparator();
     }
     isReceivingResponse = false;
-    currentResponseText = "";
   }
 }
 
@@ -257,11 +259,7 @@ async function startStream(streamId) {
 
     const apiKey = localSettings.apiKey;
     if (!apiKey) {
-      addCard({
-        error:
-          "Gemini API key not configured. Please set your API key in the extension options.",
-        timestamp: new Date().toISOString(),
-      });
+      showError("Gemini API key not configured. Please set your API key in the extension options.");
       setStatus("running", "Live — No API key");
       return;
     }
@@ -309,18 +307,12 @@ async function startStream(streamId) {
       }
     } catch (err) {
       console.error("[Gemini] Connection error:", err);
-      addCard({
-        error: "Failed to connect to Gemini: " + err.message,
-        timestamp: new Date().toISOString(),
-      });
+      showError("Failed to connect to Gemini: " + err.message);
       setStatus("running", "Live — Gemini disconnected");
     }
   } catch (err) {
     console.error("Stream setup error:", err);
-    addCard({
-      error: "Failed to start video capture: " + err.message,
-      timestamp: new Date().toISOString(),
-    });
+    showError("Failed to start video capture: " + err.message);
   }
 }
 
@@ -352,63 +344,18 @@ function stopStream() {
   }
   videoEl.srcObject = null;
   videoContainer.classList.add("hidden");
-  streamingCard.classList.add("hidden");
   btnStop.classList.add("hidden");
   isReceivingResponse = false;
-  currentResponseText = "";
+
+  // Remove blinking cursor when stopped
+  const cursor = streamText.querySelector(".cursor-blink");
+  if (cursor) cursor.remove();
+
   setStatus("stopped", "Stopped");
 
   chrome.runtime.sendMessage({ action: "stopCapture" });
 }
 
-function appendStreamingToken(text) {
-  // Remove cursor, append text, re-add cursor
-  const cursor = streamingBody.querySelector(".cursor-blink");
-  if (cursor) cursor.remove();
-  streamingBody.appendChild(document.createTextNode(text));
-  const newCursor = document.createElement("span");
-  newCursor.className = "cursor-blink";
-  streamingBody.appendChild(newCursor);
-  streamingBody.scrollTop = streamingBody.scrollHeight;
-}
-
-// ─── Feed cards ──────────────────────────────────────────────────────────────
-function addCard({ feedback, timestamp, url, title, screenshot, error }) {
-  emptyState.style.display = "none";
-
-  const card = document.createElement("div");
-  card.className = "card" + (error ? " error" : "");
-
-  const safeTitle = escapeHTML(title || url || "Screen");
-  const safeTime = escapeHTML(
-    formatTime(timestamp || new Date().toISOString())
-  );
-
-  const headerHTML = `
-    <div class="card-header">
-      <span class="card-title">${safeTitle}</span>
-      <span class="card-time">${safeTime}</span>
-    </div>`;
-
-  let bodyHTML = "";
-  if (error) {
-    bodyHTML = `<div class="card-body"><p>${escapeHTML(error)}</p></div>`;
-  } else {
-    const screenshotHTML = screenshot
-      ? `<img class="card-screenshot" src="${screenshot}" alt="Frame" />`
-      : "";
-    bodyHTML = `${screenshotHTML}<div class="card-body">${renderMarkdown(feedback)}</div>`;
-  }
-
-  card.innerHTML = headerHTML + bodyHTML;
-
-  // Keep only last 20 cards to save memory
-  while (feed.children.length >= 20) {
-    feed.removeChild(feed.lastChild);
-  }
-
-  feed.prepend(card);
-}
 
 // ─── Stop button ─────────────────────────────────────────────────────────────
 btnStop.addEventListener("click", stopStream);
@@ -428,7 +375,7 @@ chrome.runtime.onMessage.addListener((msg) => {
           { action: "getStreamId", tabId: msg.data.activeTabId },
           (res) => {
             if (res?.streamId) startStream(res.streamId);
-            else if (res?.error) addCard({ error: res.error, timestamp: new Date().toISOString() });
+            else if (res?.error) showError(res.error);
           }
         );
       }
@@ -450,8 +397,7 @@ chrome.runtime.sendMessage({ action: "getStatus" }, (res) => {
       { action: "getStreamId", tabId: res.activeTabId },
       (streamRes) => {
         if (streamRes?.streamId) startStream(streamRes.streamId);
-        else if (streamRes?.error)
-          addCard({ error: streamRes.error, timestamp: new Date().toISOString() });
+        else if (streamRes?.error) showError(streamRes.error);
       }
     );
   }

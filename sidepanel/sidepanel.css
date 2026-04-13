@@ -109,44 +109,19 @@ h1 {
   animation: pulse 1.5s infinite;
 }
 
-/* ── Streaming card ───────────────────────────────────────────────────────── */
-.streaming-card {
-  margin: 12px;
-  background: #1a1a2e;
-  border: 1px solid #4f6ef7;
-  border-radius: 10px;
-  overflow: hidden;
-  flex-shrink: 0;
-}
-
-.streaming-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 14px;
-  background: #15152a;
-  border-bottom: 1px solid #4f6ef7;
-}
-
-.streaming-title {
-  font-size: 12px;
-  font-weight: 600;
-  color: #4f6ef7;
-}
-
-.streaming-time {
-  font-size: 11px;
-  color: #666;
-}
-
-.streaming-body {
-  padding: 14px;
-  max-height: 200px;
+/* ── Continuous stream output ─────────────────────────────────────────────── */
+.stream-output {
+  flex: 1;
   overflow-y: auto;
-  font-size: 13px;
-  line-height: 1.6;
+  padding: 16px;
+}
+
+.stream-text {
+  font-size: 14px;
+  line-height: 1.7;
   white-space: pre-wrap;
   word-wrap: break-word;
+  color: #e0e0e0;
 }
 
 .cursor-blink {
@@ -163,9 +138,19 @@ h1 {
   50% { opacity: 0; }
 }
 
+.response-separator {
+  height: 1px;
+  background: #2a2a3d;
+  margin: 16px 0;
+}
+
+.stream-error {
+  color: #ff6b6b;
+  padding: 8px 0;
+}
+
 /* ── Empty state ───────────────────────────────────────────────────────────── */
 .empty-state {
-  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -175,110 +160,14 @@ h1 {
   font-size: 13px;
 }
 
-/* ── Feed ──────────────────────────────────────────────────────────────────── */
-.feed {
-  flex: 1;
-  overflow-y: auto;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.card {
-  background: #1a1a2e;
-  border: 1px solid #2a2a3d;
-  border-radius: 10px;
-  overflow: hidden;
-  animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 14px;
-  background: #15152a;
-  border-bottom: 1px solid #2a2a3d;
-}
-
-.card-title {
-  font-size: 12px;
-  font-weight: 600;
-  color: #aaa;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 70%;
-}
-
-.card-time {
-  font-size: 11px;
-  color: #666;
-  flex-shrink: 0;
-}
-
-.card-body {
-  padding: 14px;
-}
-
-.card-body p {
-  margin-bottom: 8px;
-}
-
-.card-body p:last-child {
-  margin-bottom: 0;
-}
-
-.card-screenshot {
-  width: 100%;
-  max-height: 120px;
-  object-fit: cover;
-  border-bottom: 1px solid #2a2a3d;
-}
-
-/* ── Error card ────────────────────────────────────────────────────────────── */
-.card.error {
-  border-color: rgba(255, 60, 60, 0.3);
-}
-
-.card.error .card-body {
-  color: #ff6b6b;
-}
-
-/* ── Markdown-like formatting in feedback ──────────────────────────────────── */
-.card-body strong {
-  color: #fff;
-}
-
-.card-body code {
-  background: #2a2a3d;
-  padding: 1px 5px;
-  border-radius: 4px;
-  font-size: 12px;
-}
-
-.card-body ul, .card-body ol {
-  padding-left: 20px;
-  margin: 6px 0;
-}
-
 /* ── Scrollbar ─────────────────────────────────────────────────────────────── */
-.feed::-webkit-scrollbar,
-.streaming-body::-webkit-scrollbar {
+.stream-output::-webkit-scrollbar {
   width: 5px;
 }
-.feed::-webkit-scrollbar-track,
-.streaming-body::-webkit-scrollbar-track {
+.stream-output::-webkit-scrollbar-track {
   background: transparent;
 }
-.feed::-webkit-scrollbar-thumb,
-.streaming-body::-webkit-scrollbar-thumb {
+.stream-output::-webkit-scrollbar-thumb {
   background: #333;
   border-radius: 4px;
 }
