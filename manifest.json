@@ -5,6 +5,7 @@
   "description": "A Chrome extension that reads your screen in real time and provides AI-powered feedback and suggestions.",
   "permissions": [
     "activeTab",
+    "alarms",
     "sidePanel",
     "storage",
     "tabs"

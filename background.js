@@ -1,10 +1,18 @@
 // ─── State ───────────────────────────────────────────────────────────────────
 let isCapturing = false;
-let captureInterval = null;
-let captureFrequencyMs = 5000; // default 5 seconds
+let activeTabId = null;
+
+const ALARM_NAME = "ai-cofounder-capture";
 
 // ─── Side-panel setup ────────────────────────────────────────────────────────
 chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false });
+
+// ─── Alarm listener (replaces setInterval for MV3 reliability) ───────────────
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === ALARM_NAME && isCapturing && activeTabId !== null) {
+    captureAndAnalyze(activeTabId);
+  }
+});
 
 // ─── Message router ──────────────────────────────────────────────────────────
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
@@ -34,31 +42,29 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   return true; // keep channel open for async
 });
 
-// ─── Capture loop ────────────────────────────────────────────────────────────
+// ─── Capture loop using chrome.alarms ────────────────────────────────────────
 async function startCapture(tabId) {
   if (isCapturing) return;
   isCapturing = true;
+  activeTabId = tabId;
 
-  // Read frequency from storage
+  // Read frequency from storage (non-secret settings stay in sync)
   const settings = await chrome.storage.sync.get({
     captureFrequency: 5,
   });
-  captureFrequencyMs = settings.captureFrequency * 1000;
+  const periodMinutes = Math.max(settings.captureFrequency / 60, 0.5);
 
   broadcastStatus();
-  captureAndAnalyze(tabId);
 
-  captureInterval = setInterval(() => {
-    captureAndAnalyze(tabId);
-  }, captureFrequencyMs);
+  // Fire immediately, then repeat via alarm
+  captureAndAnalyze(tabId);
+  chrome.alarms.create(ALARM_NAME, { periodInMinutes: periodMinutes });
 }
 
-function stopCapture() {
+async function stopCapture() {
   isCapturing = false;
-  if (captureInterval) {
-    clearInterval(captureInterval);
-    captureInterval = null;
-  }
+  activeTabId = null;
+  await chrome.alarms.clear(ALARM_NAME);
   broadcastStatus();
 }
 
@@ -102,14 +108,16 @@ async function captureAndAnalyze(tabId) {
 
 // ─── AI integration ──────────────────────────────────────────────────────────
 async function analyzeWithAI(screenshotDataUrl, pageUrl, pageTitle) {
-  const settings = await chrome.storage.sync.get({
-    apiKey: "",
+  // API key is stored in local storage (not synced across devices for security)
+  const localSettings = await chrome.storage.local.get({ apiKey: "" });
+  const syncSettings = await chrome.storage.sync.get({
     aiProvider: "openai",
     customPrompt: "",
     modelName: "",
   });
 
-  if (!settings.apiKey) {
+  const apiKey = localSettings.apiKey;
+  if (!apiKey) {
     throw new Error(
       "API key not configured. Please set your API key in the extension options."
     );
@@ -119,16 +127,16 @@ async function analyzeWithAI(screenshotDataUrl, pageUrl, pageTitle) {
 
 The user is currently viewing: ${pageTitle} (${pageUrl})
 
-${settings.customPrompt ? "Additional context from user: " + settings.customPrompt : ""}`;
+${syncSettings.customPrompt ? "Additional context from user: " + syncSettings.customPrompt : ""}`;
 
   const base64Image = screenshotDataUrl.split(",")[1];
 
-  if (settings.aiProvider === "openai") {
-    return callOpenAI(settings.apiKey, systemPrompt, base64Image, settings.modelName);
-  } else if (settings.aiProvider === "anthropic") {
-    return callAnthropic(settings.apiKey, systemPrompt, base64Image, settings.modelName);
+  if (syncSettings.aiProvider === "openai") {
+    return callOpenAI(apiKey, systemPrompt, base64Image, syncSettings.modelName);
+  } else if (syncSettings.aiProvider === "anthropic") {
+    return callAnthropic(apiKey, systemPrompt, base64Image, syncSettings.modelName);
   } else {
-    throw new Error("Unknown AI provider: " + settings.aiProvider);
+    throw new Error("Unknown AI provider: " + syncSettings.aiProvider);
   }
 }
 

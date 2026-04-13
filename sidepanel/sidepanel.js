@@ -14,6 +14,13 @@ function formatTime(iso) {
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 }
 
+/** Escape HTML special characters to prevent XSS */
+function escapeHTML(str) {
+  const div = document.createElement("div");
+  div.textContent = str;
+  return div.innerHTML;
+}
+
 /** Very light markdown → HTML (bold, code, lists) */
 function renderMarkdown(text) {
   let html = text
@@ -45,15 +52,18 @@ function addCard({ feedback, timestamp, url, title, screenshot, error }) {
   const card = document.createElement("div");
   card.className = "card" + (error ? " error" : "");
 
+  const safeTitle = escapeHTML(title || url || "Screen");
+  const safeTime = escapeHTML(formatTime(timestamp || new Date().toISOString()));
+
   const headerHTML = `
     <div class="card-header">
-      <span class="card-title">${title || url || "Screen"}</span>
-      <span class="card-time">${formatTime(timestamp || new Date().toISOString())}</span>
+      <span class="card-title">${safeTitle}</span>
+      <span class="card-time">${safeTime}</span>
     </div>`;
 
   let bodyHTML = "";
   if (error) {
-    bodyHTML = `<div class="card-body"><p>${error}</p></div>`;
+    bodyHTML = `<div class="card-body"><p>${escapeHTML(error)}</p></div>`;
   } else {
     const screenshotHTML = screenshot
       ? `<img class="card-screenshot" src="${screenshot}" alt="Screenshot" title="Click to expand" />`
