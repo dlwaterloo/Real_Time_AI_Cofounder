@@ -86,7 +86,7 @@ async function connectGemini(apiKey, systemPrompt) {
         setup: {
           model: "models/gemini-2.5-flash-native-audio-latest",
           generationConfig: {
-            responseModalities: ["AUDIO"],
+            responseModalities: ["TEXT"],
           },
           systemInstruction: {
             parts: [{ text: systemPrompt }],
