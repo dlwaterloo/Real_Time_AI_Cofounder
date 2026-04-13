@@ -86,7 +86,10 @@ async function connectGemini(apiKey, systemPrompt) {
         setup: {
           model: "models/gemini-2.5-flash-native-audio-latest",
           generationConfig: {
-            responseModalities: ["TEXT"],
+            // Native audio model requires AUDIO modality for setup.
+            // Text parts are still returned alongside audio when we
+            // send explicit clientContent analysis prompts.
+            responseModalities: ["AUDIO"],
           },
           systemInstruction: {
             parts: [{ text: systemPrompt }],
